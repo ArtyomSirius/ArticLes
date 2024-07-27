@@ -7,7 +7,7 @@ import hashlib
 
 # Функция для создания таблиц в базе данных
 def init_db():
-    conn = sqlite3.connect('users.db')
+    conn = sqlite3.connect('./users.db')
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
@@ -213,17 +213,17 @@ def main_page():
                 if st.button(f"Ответить на комментарий {comment[1]}", key=f"submit_reply_{comment[0]}"):
                     if reply_content:
                         add_comment(article[0], st.session_state['user_id'], reply_content, comment[0])
-                        st.experimental_rerun()
+                        st.rerun()
             if 'logged_in' in st.session_state and st.session_state['is_admin']:
                 if st.button(f"Удалить комментарий {comment[2]}", key=f"delete_comment_{comment[0]}"):
                     delete_comment(comment[0])
-                    st.experimental_rerun()
+                    st.rerun()
         if 'logged_in' in st.session_state:
             comment_content = st.text_input(f"Добавить комментарий к статье {article[2]}", key=f"comment_{article[0]}")
             if st.button(f"Отправить комментарий к статье {article[2]}", key=f"submit_comment_{article[0]}"):
                 if comment_content:
                     add_comment(article[0], st.session_state['user_id'], comment_content)
-                    st.experimental_rerun()
+                    st.rerun()
         if st.button(f"Показать другие статьи автора {article[1]}", key=f"show_other_articles_{article[1]}_{article[0]}"):
             show_other_articles_by_author(article[1])
         st.markdown("---")
@@ -250,7 +250,7 @@ def login_page():
             st.session_state['user_id'] = user[0]
             st.session_state['is_admin'] = user[3]
             st.success("Вход выполнен успешно!")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Неверное имя пользователя или пароль")
 
@@ -302,7 +302,7 @@ def main():
                 st.text(article[2])
                 if st.button(f"Удалить статью {article[1]}", key=f"delete_article_{article[0]}"):
                     delete_user_article(article[0], st.session_state['user_id'])
-                    st.experimental_rerun()
+                    st.rerun()
                 st.markdown("---")
         elif selected == "Создать статью":
             st.title("Создать статью")
@@ -315,10 +315,10 @@ def main():
             if st.button("Удалить мой аккаунт"):
                 delete_user(st.session_state['user_id'])
                 st.session_state['logged_in'] = False
-                st.experimental_rerun()
+                st.rerun()
         elif selected == "Выйти":
             st.session_state['logged_in'] = False
-            st.experimental_rerun()
+            st.rerun()
         if st.session_state['is_admin']:
             with st.sidebar:
                 st.sidebar.subheader("Администратор")
