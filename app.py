@@ -186,8 +186,8 @@ def show_other_articles_by_author(author_name):
 def show_article_content(content):
     st.write(content)
 
-def show_article(article_id, title, content):
-    st.subheader(title)
+def show_article(author, article_id, title, content):
+    st.subheader(title + f". Автор {author}")
     if len(content) > 100:
         st.text(content[:100] + '...')
         if st.button("Читать полностью", key=f"full_{article_id}"):
@@ -200,7 +200,7 @@ def main_page():
     st.title("Все статьи")
     articles = get_all_articles()
     for article in articles:
-        show_article(article[0], article[2], article[3])
+        show_article(article[1], article[0], article[2], article[3])
         st.subheader("Комментарии")
         comments = get_article_comments(article[0])
         for comment in comments:
