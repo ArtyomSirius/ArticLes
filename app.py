@@ -5,6 +5,11 @@ from streamlit_option_menu import option_menu
 import sqlite3
 import hashlib
 
+if os.path.exists('/mnt/data'):
+    st.write("Директория `/mnt/data` существует!")
+else:
+    st.write("Директория `/mnt/data` не существует!")
+
 data_base = "/mnt/data/users.db"
 
 # Функция для создания таблиц в базе данных
