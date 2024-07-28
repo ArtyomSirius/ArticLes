@@ -6,12 +6,8 @@ import sqlite3
 import hashlib
 import os
 
-if os.path.exists('/mnt/data'):
-    st.success("База данных подключена!")
-else:
-    st.error("Директория `/mnt/data` не существует! Следовательно сайт не может продолжить работу!")
 
-data_base = "/mnt/data/users.db"
+data_base = "/users.db"
 
 # Функция для создания таблиц в базе данных
 def init_db():
