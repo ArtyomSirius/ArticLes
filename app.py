@@ -7,7 +7,7 @@ import hashlib
 import os
 
 
-data_base = "./mnt/data/users.db"
+data_base = "./users.db"
 
 # Функция для создания таблиц в базе данных
 def init_db():
