@@ -4,11 +4,12 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 import sqlite3
 import hashlib
+import os
 
 if os.path.exists('/mnt/data'):
-    st.write("Директория `/mnt/data` существует!")
+    st.success("База данных подключена!")
 else:
-    st.write("Директория `/mnt/data` не существует!")
+    st.error("Директория `/mnt/data` не существует! Следовательно сайт не может продолжить работу!")
 
 data_base = "/mnt/data/users.db"
 
