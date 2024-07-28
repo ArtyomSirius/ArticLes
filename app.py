@@ -5,9 +5,11 @@ from streamlit_option_menu import option_menu
 import sqlite3
 import hashlib
 
+data_base = "/mnt/data/users.db"
+
 # Функция для создания таблиц в базе данных
 def init_db():
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
@@ -46,7 +48,7 @@ def hash_password(password):
 
 # Функция для регистрации пользователя
 def register_user(username, password, is_admin=False):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     try:
         c.execute('INSERT INTO users (username, password, is_admin) VALUES (?, ?, ?)', 
@@ -58,7 +60,7 @@ def register_user(username, password, is_admin=False):
 
 # Функция для проверки учетных данных пользователя
 def login_user(username, password):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('SELECT * FROM users WHERE username=? AND password=?', 
               (username, hash_password(password)))
@@ -68,7 +70,7 @@ def login_user(username, password):
 
 # Функция для создания статьи
 def create_article(user_id, title, content):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('INSERT INTO articles (user_id, title, content) VALUES (?, ?, ?)', 
               (user_id, title, content))
@@ -77,7 +79,7 @@ def create_article(user_id, title, content):
 
 # Функция для удаления статьи (для администраторов)
 def delete_article(article_id):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('DELETE FROM articles WHERE id=?', (article_id,))
     c.execute('DELETE FROM comments WHERE article_id=?', (article_id,))
@@ -86,7 +88,7 @@ def delete_article(article_id):
 
 # Функция для удаления статьи пользователя
 def delete_user_article(article_id, user_id):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('DELETE FROM articles WHERE id=? AND user_id=?', (article_id, user_id))
     c.execute('DELETE FROM comments WHERE article_id=?', (article_id,))
@@ -95,7 +97,7 @@ def delete_user_article(article_id, user_id):
 
 # Функция для удаления пользователя (для администраторов)
 def delete_user(user_id):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     
     # Удаление всех статей пользователя
@@ -112,7 +114,7 @@ def delete_user(user_id):
 
 # Функция для удаления комментария (для администраторов)
 def delete_comment(comment_id):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('DELETE FROM comments WHERE id=?', (comment_id,))
     conn.commit()
@@ -120,7 +122,7 @@ def delete_comment(comment_id):
 
 # Функция для получения всех статей
 def get_all_articles():
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('SELECT articles.id, users.username, articles.title, articles.content FROM articles JOIN users ON articles.user_id = users.id')
     articles = c.fetchall()
@@ -129,7 +131,7 @@ def get_all_articles():
 
 # Функция для получения статей пользователя
 def get_user_articles(user_id):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('SELECT id, title, content FROM articles WHERE user_id=?', (user_id,))
     articles = c.fetchall()
@@ -138,7 +140,7 @@ def get_user_articles(user_id):
 
 # Функция для добавления комментария
 def add_comment(article_id, user_id, content, parent_comment_id=None):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('INSERT INTO comments (article_id, user_id, content, parent_comment_id) VALUES (?, ?, ?, ?)', 
               (article_id, user_id, content, parent_comment_id))
@@ -147,7 +149,7 @@ def add_comment(article_id, user_id, content, parent_comment_id=None):
 
 # Функция для получения комментариев к статье
 def get_article_comments(article_id):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('SELECT comments.id, users.username, comments.content FROM comments JOIN users ON comments.user_id = users.id WHERE article_id=? AND parent_comment_id IS NULL', (article_id,))
     comments = c.fetchall()
@@ -156,7 +158,7 @@ def get_article_comments(article_id):
 
 # Функция для получения ответов на комментарии
 def get_comment_replies(comment_id):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('SELECT comments.id, users.username, comments.content FROM comments JOIN users ON comments.user_id = users.id WHERE parent_comment_id=?', (comment_id,))
     replies = c.fetchall()
@@ -166,7 +168,7 @@ def get_comment_replies(comment_id):
 # Функция для отображения других статей автора в диалоговом окне
 @st.experimental_dialog("Другие статьи автора")
 def show_other_articles_by_author(author_name):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('SELECT id, title, content FROM articles WHERE user_id=(SELECT id FROM users WHERE username=?)', (author_name,))
     articles = c.fetchall()
@@ -256,21 +258,21 @@ def login_page():
 
 # Функция для назначения пользователя администратором по имени
 def assign_admin_by_username(username):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('UPDATE users SET is_admin=1 WHERE username=?', (username,))
     conn.commit()
     conn.close()
 
 def unassign_admin_by_username(username):
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('UPDATE users SET is_admin=0 WHERE username=?', (username,))
     conn.commit()
     conn.close()
 
 def show_all_accounts():
-    conn = sqlite3.connect('./users.db')
+    conn = sqlite3.connect(data_base)
     c = conn.cursor()
     c.execute('SELECT username, password FROM users')
     accounts = c.fetchall()
@@ -328,7 +330,7 @@ def main():
                 if admin_selected == "Удалить пользователя":
                     username_to_delete = st.text_input("Имя пользователя для удаления")
                     if st.button("Удалить пользователя"):
-                        conn = sqlite3.connect('./users.db')
+                        conn = sqlite3.connect(data_base)
                         c = conn.cursor()
                         c.execute('SELECT id FROM users WHERE username=?', (username_to_delete,))
                         user = c.fetchone()
