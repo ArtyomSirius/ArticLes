@@ -24,7 +24,7 @@ def init_db():
             user_id INTEGER,
             title TEXT NOT NULL,
             description TEXT NOT NULL,
-            video_path TEXT NOT NULL,
+            video_data BLOB NOT NULL,
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     ''')
@@ -77,11 +77,11 @@ def login_user(username, password):
     return user
 
 # Функция для создания видеоролика
-def create_video(user_id, title, description, video_path):
+def create_video(user_id, title, description, video_data):
     conn = sqlite3.connect(data_base)
     c = conn.cursor()
-    c.execute('INSERT INTO videos (user_id, title, description, video_path) VALUES (?,?,?,?)', 
-              (user_id, title, description, video_path))
+    c.execute('INSERT INTO videos (user_id, title, description, video_data) VALUES (?,?,?,?)', 
+              (user_id, title, description, video_data))
     conn.commit()
     conn.close()
 
@@ -261,9 +261,10 @@ def main():
             title = st.text_input("Название видеоролика")
             description = st.text_area("Описание видеоролика")
             video_file = st.file_uploader("Выбрать видеофайл")
-            if st.button("Загрузить"):
-                create_video(st.session_state['user_id'], title, description, video_file.name)
-                st.success("Видеоролик загружен!")
+            if video_file:
+                video_data = video_file.read()
+                # сохраните видеоданные в базе данных
+                create_video(st.session_state['user_id'], title, description, video_data)
         elif selected == "Удалить аккаунт":
             if st.button("Удалить мой аккаунт"):
                 conn = sqlite3.connect(data_base)
