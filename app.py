@@ -1,11 +1,8 @@
-
-
 import streamlit as st
 from streamlit_option_menu import option_menu
 import sqlite3
 import hashlib
 import os
-
 
 data_base = "./users.db"
 
@@ -22,22 +19,31 @@ def init_db():
         )
     ''')
     c.execute('''
-        CREATE TABLE IF NOT EXISTS articles (
+        CREATE TABLE IF NOT EXISTS videos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             title TEXT NOT NULL,
-            content TEXT NOT NULL,
+            description TEXT NOT NULL,
+            video_path TEXT NOT NULL,
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     ''')
     c.execute('''
         CREATE TABLE IF NOT EXISTS comments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            article_id INTEGER,
+            video_id INTEGER,
             user_id INTEGER,
             content TEXT NOT NULL,
-            parent_comment_id INTEGER,
-            FOREIGN KEY(article_id) REFERENCES articles(id),
+            FOREIGN KEY(video_id) REFERENCES videos(id),
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS likes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            video_id INTEGER,
+            user_id INTEGER,
+            FOREIGN KEY(video_id) REFERENCES videos(id),
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     ''')
@@ -53,7 +59,7 @@ def register_user(username, password, is_admin=False):
     conn = sqlite3.connect(data_base)
     c = conn.cursor()
     try:
-        c.execute('INSERT INTO users (username, password, is_admin) VALUES (?, ?, ?)', 
+        c.execute('INSERT INTO users (username, password, is_admin) VALUES (?,?,?)', 
                   (username, hash_password(password), int(is_admin)))
         conn.commit()
     except sqlite3.IntegrityError:
@@ -70,167 +76,115 @@ def login_user(username, password):
     conn.close()
     return user
 
-# Функция для создания статьи
-def create_article(user_id, title, content):
+# Функция для создания видеоролика
+def create_video(user_id, title, description, video_path):
     conn = sqlite3.connect(data_base)
     c = conn.cursor()
-    c.execute('INSERT INTO articles (user_id, title, content) VALUES (?, ?, ?)', 
-              (user_id, title, content))
+    c.execute('INSERT INTO videos (user_id, title, description, video_path) VALUES (?,?,?,?)', 
+              (user_id, title, description, video_path))
     conn.commit()
     conn.close()
 
-# Функция для удаления статьи (для администраторов)
-def delete_article(article_id):
+# Функция для удаления видеоролика
+def delete_video(video_id):
     conn = sqlite3.connect(data_base)
     c = conn.cursor()
-    c.execute('DELETE FROM articles WHERE id=?', (article_id,))
-    c.execute('DELETE FROM comments WHERE article_id=?', (article_id,))
+    c.execute('DELETE FROM videos WHERE id=?', (video_id,))
     conn.commit()
     conn.close()
 
-# Функция для удаления статьи пользователя
-def delete_user_article(article_id, user_id):
+# Функция для получения всех видеороликов
+def get_all_videos():
     conn = sqlite3.connect(data_base)
     c = conn.cursor()
-    c.execute('DELETE FROM articles WHERE id=? AND user_id=?', (article_id, user_id))
-    c.execute('DELETE FROM comments WHERE article_id=?', (article_id,))
-    conn.commit()
+    c.execute('SELECT videos.id, users.username, videos.title, videos.description, videos.video_path FROM videos JOIN users ON videos.user_id = users.id')
+    videos = c.fetchall()
     conn.close()
+    return videos
 
-# Функция для удаления пользователя (для администраторов)
-def delete_user(user_id):
+# Функция для получения видеороликов пользователя
+def get_user_videos(user_id):
     conn = sqlite3.connect(data_base)
     c = conn.cursor()
-    
-    # Удаление всех статей пользователя
-    c.execute('DELETE FROM articles WHERE user_id=?', (user_id,))
-    
-    # Удаление всех комментариев пользователя
-    c.execute('DELETE FROM comments WHERE user_id=?', (user_id,))
-    
-    # Удаление самого пользователя
-    c.execute('DELETE FROM users WHERE id=?', (user_id,))
-    
-    conn.commit()
+    c.execute('SELECT id, title, description, video_path FROM videos WHERE user_id=?', (user_id,))
+    videos = c.fetchall()
     conn.close()
-
-# Функция для удаления комментария (для администраторов)
-def delete_comment(comment_id):
-    conn = sqlite3.connect(data_base)
-    c = conn.cursor()
-    c.execute('DELETE FROM comments WHERE id=?', (comment_id,))
-    conn.commit()
-    conn.close()
-
-# Функция для получения всех статей
-def get_all_articles():
-    conn = sqlite3.connect(data_base)
-    c = conn.cursor()
-    c.execute('SELECT articles.id, users.username, articles.title, articles.content FROM articles JOIN users ON articles.user_id = users.id')
-    articles = c.fetchall()
-    conn.close()
-    return articles
-
-# Функция для получения статей пользователя
-def get_user_articles(user_id):
-    conn = sqlite3.connect(data_base)
-    c = conn.cursor()
-    c.execute('SELECT id, title, content FROM articles WHERE user_id=?', (user_id,))
-    articles = c.fetchall()
-    conn.close()
-    return articles
+    return videos
 
 # Функция для добавления комментария
-def add_comment(article_id, user_id, content, parent_comment_id=None):
+def add_comment(video_id, user_id, content):
     conn = sqlite3.connect(data_base)
     c = conn.cursor()
-    c.execute('INSERT INTO comments (article_id, user_id, content, parent_comment_id) VALUES (?, ?, ?, ?)', 
-              (article_id, user_id, content, parent_comment_id))
+    c.execute('INSERT INTO comments (video_id, user_id, content) VALUES (?,?,?)', 
+              (video_id, user_id, content))
     conn.commit()
     conn.close()
 
-# Функция для получения комментариев к статье
-def get_article_comments(article_id):
+# Функция для получения комментариев к видеоролику
+def get_video_comments(video_id):
     conn = sqlite3.connect(data_base)
     c = conn.cursor()
-    c.execute('SELECT comments.id, users.username, comments.content FROM comments JOIN users ON comments.user_id = users.id WHERE article_id=? AND parent_comment_id IS NULL', (article_id,))
+    c.execute('SELECT comments.id, users.username, comments.content FROM comments JOIN users ON comments.user_id = users.id WHERE video_id=?', (video_id,))
     comments = c.fetchall()
     conn.close()
     return comments
 
-# Функция для получения ответов на комментарии
-def get_comment_replies(comment_id):
+# Функция для добавления лайка
+def add_like(video_id, user_id):
     conn = sqlite3.connect(data_base)
     c = conn.cursor()
-    c.execute('SELECT comments.id, users.username, comments.content FROM comments JOIN users ON comments.user_id = users.id WHERE parent_comment_id=?', (comment_id,))
-    replies = c.fetchall()
+    c.execute('INSERT INTO likes (video_id, user_id) VALUES (?,?)', 
+              (video_id, user_id))
+    conn.commit()
     conn.close()
-    return replies
 
-# Функция для отображения других статей автора в диалоговом окне
-@st.experimental_dialog("Другие статьи автора")
-def show_other_articles_by_author(author_name):
+# Функция для получения количества лайков видеоролика
+def get_video_likes(video_id):
     conn = sqlite3.connect(data_base)
     c = conn.cursor()
-    c.execute('SELECT id, title, content FROM articles WHERE user_id=(SELECT id FROM users WHERE username=?)', (author_name,))
-    articles = c.fetchall()
+    c.execute('SELECT COUNT(*) FROM likes WHERE video_id=?', (video_id,))
+    likes = c.fetchone()[0]
     conn.close()
+    return likes
 
-    if articles:
-        selected_article = st.selectbox(f"Другие статьи автора {author_name}", [f"{article[1]} (ID: {article[0]})" for article in articles])
-        if selected_article:
-            article_id = int(selected_article.split('(ID: ')[1].split(')')[0])
-            full_content = [article[2] for article in articles if article[0] == article_id][0]
-            st.write(full_content)
-    else:
-        st.info(f"Нет других статей от автора {author_name}")
-
-# Функция для отображения статьи
-@st.experimental_dialog("Полная версия статьи")
-def show_article_content(content):
-    st.write(content)
-
-def show_article(author, article_id, title, content):
-    st.subheader(title + f". Автор {author}")
-    if len(content) > 100:
-        st.text(content[:100] + '...')
-        if st.button("Читать полностью", key=f"full_{article_id}"):
-            show_article_content(content)
-    else:
-        st.text(content)
+# Функция для отображения видеоролика
+def show_video(video_id):
+    conn = sqlite3.connect(data_base)
+    c = conn.cursor()
+    c.execute('SELECT videos.id, users.username, videos.title, videos.description, videos.video_path FROM videos JOIN users ON videos.user_id = users.id WHERE videos.id=?', (video_id,))
+    video = c.fetchone()
+    conn.close()
+    st.title(video[2])
+    st.text(video[3])
+    st.video(video[4])
+    likes = get_video_likes(video_id)
+    st.write(f"Лайков: {likes}")
+    if st.button("Лайк"):
+        add_like(video_id, st.session_state['user_id'])
+        st.rerun()
+    comments = get_video_comments(video_id)
+    for comment in comments:
+        st.write(f"{comment[1]}: {comment[2]}")
+    comment_content = st.text_input("Добавить комментарий")
+    if st.button("Отправить комментарий"):
+        add_comment(video_id, st.session_state['user_id'], comment_content)
+        st.rerun()
+    user_videos = get_user_videos(video[1])
+    st.write("Другие видеоролики автора:")
+    for user_video in user_videos:
+        if user_video[0]!= video_id:
+            st.write(f"{user_video[1]}")
+            st.video(user_video[3])
 
 # Главная страница
 def main_page():
-    st.title("Все статьи")
-    articles = get_all_articles()
-    for article in articles:
-        show_article(article[1], article[0], article[2], article[3])
-        st.subheader("Комментарии")
-        comments = get_article_comments(article[0])
-        for comment in comments:
-            st.write(f"{comment[1]}: {comment[2]}")
-            replies = get_comment_replies(comment[0])
-            for reply in replies:
-                st.write(f"--- {reply[1]}: {reply[2]}")
-            if 'logged_in' in st.session_state:
-                reply_content = st.text_input(f"Ответить на комментарий от {comment[1]}", key=f"reply_{comment[0]}")
-                if st.button(f"Ответить на комментарий {comment[1]}", key=f"submit_reply_{comment[0]}"):
-                    if reply_content:
-                        add_comment(article[0], st.session_state['user_id'], reply_content, comment[0])
-                        st.rerun()
-            if 'logged_in' in st.session_state and st.session_state['is_admin']:
-                if st.button(f"Удалить комментарий {comment[2]}", key=f"delete_comment_{comment[0]}"):
-                    delete_comment(comment[0])
-                    st.rerun()
-        if 'logged_in' in st.session_state:
-            comment_content = st.text_input(f"Добавить комментарий к статье {article[2]}", key=f"comment_{article[0]}")
-            if st.button(f"Отправить комментарий к статье {article[2]}", key=f"submit_comment_{article[0]}"):
-                if comment_content:
-                    add_comment(article[0], st.session_state['user_id'], comment_content)
-                    st.rerun()
-        if st.button(f"Показать другие статьи автора {article[1]}", key=f"show_other_articles_{article[1]}_{article[0]}"):
-            show_other_articles_by_author(article[1])
-        st.markdown("---")
+    st.title("Все видеоролики")
+    videos = get_all_videos()
+    for video in videos:
+        st.write(f"{video[2]}")
+        st.video(video[4])
+        if st.button(f"Открыть видеоролик {video[2]}"):
+            show_video(video[0])
 
 # Функция для страницы регистрации
 def register_page():
@@ -252,11 +206,10 @@ def login_page():
             st.session_state['logged_in'] = True
             st.session_state['username'] = user[1]
             st.session_state['user_id'] = user[0]
-            st.session_state['is_admin'] = user[3]
             st.success("Вход выполнен успешно!")
             st.rerun()
         else:
-            st.error("Неверное имя пользователя или пароль")
+            st.error("Неправильный логин или пароль")
 
 # Функция для назначения пользователя администратором по имени
 def assign_admin_by_username(username):
@@ -284,7 +237,6 @@ def show_all_accounts():
         st.markdown("---")
         st.write(f"**Username:** {account[0]}")
         st.write(f"**Password:** {account[1]}")
-        #st.write(f"**Comments:** {account[2]}")
 
 # Главная функция
 def main():
@@ -295,29 +247,30 @@ def main():
 
     if st.session_state['logged_in']:
         with st.sidebar:
-            selected = option_menu("Меню", ["Все статьи", "Мои статьи", "Создать статью", "Удалить аккаунт", "Выйти"],
+            selected = option_menu("Меню", ["Все видеоролики", "Мои видеоролики", "Загрузить видеоролик", "Удалить аккаунт", "Выйти"],
                                    icons=["house", "file-earmark", "pencil-square", "trash", "box-arrow-right"])
-        if selected == "Все статьи":
+        if selected == "Все видеоролики":
             main_page()
-        elif selected == "Мои статьи":
-            user_articles = get_user_articles(st.session_state['user_id'])
-            for article in user_articles:
-                st.subheader(article[1])
-                st.text(article[2])
-                if st.button(f"Удалить статью {article[1]}", key=f"delete_article_{article[0]}"):
-                    delete_user_article(article[0], st.session_state['user_id'])
-                    st.rerun()
-                st.markdown("---")
-        elif selected == "Создать статью":
-            st.title("Создать статью")
-            title = st.text_input("Заголовок")
-            content = st.text_area("Содержание")
-            if st.button("Опубликовать"):
-                create_article(st.session_state['user_id'], title, content)
-                st.success("Статья опубликована!")
+        elif selected == "Мои видеоролики":
+            user_videos = get_user_videos(st.session_state['user_id'])
+            for video in user_videos:
+                st.write(f"{video[1]}")
+                st.video(video[3])
+        elif selected == "Загрузить видеоролик":
+            st.title("Загрузить видеоролик")
+            title = st.text_input("Название видеоролика")
+            description = st.text_area("Описание видеоролика")
+            video_file = st.file_uploader("Выбрать видеофайл")
+            if st.button("Загрузить"):
+                create_video(st.session_state['user_id'], title, description, video_file.name)
+                st.success("Видеоролик загружен!")
         elif selected == "Удалить аккаунт":
             if st.button("Удалить мой аккаунт"):
-                delete_user(st.session_state['user_id'])
+                conn = sqlite3.connect(data_base)
+                c = conn.cursor()
+                c.execute('DELETE FROM users WHERE id=?', (st.session_state['user_id'],))
+                conn.commit()
+                conn.close()
                 st.session_state['logged_in'] = False
                 st.rerun()
         elif selected == "Выйти":
@@ -328,7 +281,7 @@ def main():
                 st.sidebar.subheader("Администратор")
                 admin_selected = option_menu("Админ-меню", 
                     ["Удалить пользователя", "Назначить администратора", "Снять с админов", "Докс"], 
-                    icons=["person-dash", "person-plus-fill", "person-dash-fill", "key-fill", "Очистить статьи пользователя"])
+                    icons=["person-dash", "person-plus-fill", "person-dash-fill", "key-fill"])
                 if admin_selected == "Удалить пользователя":
                     username_to_delete = st.text_input("Имя пользователя для удаления")
                     if st.button("Удалить пользователя"):
@@ -337,7 +290,8 @@ def main():
                         c.execute('SELECT id FROM users WHERE username=?', (username_to_delete,))
                         user = c.fetchone()
                         if user:
-                            delete_user(user[0])
+                            c.execute('DELETE FROM users WHERE id=?', (user[0],))
+                            conn.commit()
                             st.success("Пользователь удалён!")
                         else:
                             st.error("Пользователь не найден.")
