@@ -181,7 +181,7 @@ def main_page():
     st.title("Все видеоролики")
     videos = get_all_videos()
     for video in videos:
-        st.write(f"{video[2]}")
+        st.write(video[4])
         st.video(video[4])
         if st.button(f"Открыть видеоролик {video[2]}"):
             show_video(video[0])
